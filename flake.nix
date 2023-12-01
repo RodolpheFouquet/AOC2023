@@ -18,16 +18,5 @@
     devShells.x86_64-linux.default = mkShell {
         inherit buildInputs nativeBuildInputs;
     };
-    packages.x86_64-linux.default =  with import nixpkgs { system = "x86_64-linux"; };
-      stdenv.mkDerivation {
-        name = "aoc2023";
-        src = self;
-        inherit buildInputs nativeBuildInputs;
-        phases = [ "buildPhase" ];
-        buildPhase = ''
-            cargo test
-        '';
-      }; 
-
   };
 }
