@@ -1,15 +1,5 @@
 use std::ops::{Add, AddAssign, Sub};
 
-const TEST: &str = r#"467..114..
-...*......
-..35..633.
-......#...
-617*......
-.....+.58.
-..592.....
-......755.
-...$.*....
-.664.598.."#;
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash, Copy)]
 struct Position {
@@ -64,19 +54,12 @@ impl Position {
 
 #[derive(Debug)]
 struct Engine {
-    width: usize,
-    height: usize,
-    map: Vec<char>,
-    symbols: Vec<Position>,
-    parts: Vec<i64>,
-    stars: Vec<Position>,
 }
 
 
 impl From<&str> for Engine {
     fn from(map_string: &str) -> Self { 
         let width = map_string.lines().count(); 
-        let height = map_string.lines().nth(0).unwrap().len(); 
         let mut stars = Vec::new(); 
         let mut all_nums: Vec<(i64, Vec<Position>)> = Vec::new();
 
@@ -90,7 +73,7 @@ impl From<&str> for Engine {
                 stars.push(pos.clone());
             }
             return c != '.' && !c.is_ascii_digit()
-        }).map(|(c, pos)| pos).collect::<Vec<Position>>();
+        }).map(|(_c, pos)| pos).collect::<Vec<Position>>();
 
         let mut cur_num : Vec<(i64, char)> = Vec::new();
         let mut parts: Vec<i64> = Vec::new();
@@ -107,34 +90,33 @@ impl From<&str> for Engine {
 
                 let adjacent_first = symbols.iter().any(|s| s.adjacent(&first));
                 let adjacent_last = symbols.iter().any(|s| s.adjacent(&last));
-                let number : i64 = cur_num.iter().map(|(pos, c)| c).collect::<String>().parse::<i64>().unwrap();
+                let number : i64 = cur_num.iter().map(|(_pos, c)| c).collect::<String>().parse::<i64>().unwrap();
                 if adjacent_first || adjacent_last {
                     parts.push(number);
                 }
 
                 let positions : Vec<Position> =  cur_num.iter()
-                    .map(|(pos, c)| Position{x: pos % width as i64, y: pos / width as i64}).collect::<Vec<Position>>();
+                    .map(|(pos, _c)| Position{x: pos % width as i64, y: pos / width as i64}).collect::<Vec<Position>>();
                 all_nums.push((number,positions));
                 cur_num.clear();
             }
         }
         let gears_ratios : i64 = stars.iter().map(|pos| {
             
-            let adjacent_parts = all_nums.iter().filter(|(part, part_positions)| {
+            let adjacent_parts = all_nums.iter().filter(|(_part, part_positions)| {
                 pos.adjacent(part_positions.first().unwrap()) || pos.adjacent(part_positions.last().unwrap())
-            }).map(|(part, position)| *part).collect::<Vec<i64>>();
+            }).map(|(part, _position)| *part).collect::<Vec<i64>>();
 
             (pos.clone(), adjacent_parts)
-        }).filter(|(pos, vec)| vec.len() == 2).map(|(p,v)| v[0]*v[1]).sum();
+        }).filter(|(_pos, vec)| vec.len() == 2).map(|(_p,v)| v[0]*v[1]).sum();
         println!("the sum of gear ratios is {}", gears_ratios); 
-        Self{width, height, map, symbols, parts, stars}
+        println!("engine {}", parts.iter().sum::<i64>());
+        Self{}
     }
 }
 
 
 
 fn main() {
-
-    let engine : Engine = include_str!("../input.txt").into();    
-    println!("engine {}", engine.parts.iter().sum::<i64>());
+    let _ = Engine::from(include_str!("../input.txt"));    
 }
