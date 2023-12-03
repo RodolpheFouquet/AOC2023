@@ -114,15 +114,8 @@ impl From<&str> for Engine {
 
                 let positions : Vec<Position> =  cur_num.iter()
                     .map(|(pos, c)| Position{x: pos % width as i64, y: pos / width as i64}).collect::<Vec<Position>>();
-                all_nums.push(
-                    (
-                        number,
-                        positions
-                    )
-                );
-
-
-                       cur_num.clear();
+                all_nums.push((number,positions));
+                cur_num.clear();
             }
         }
         let gears_ratios : i64 = stars.iter().map(|pos| {
