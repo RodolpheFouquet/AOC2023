@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use num::Integer;
 
 const TEST: &str = r#"RL
 
@@ -79,7 +80,7 @@ fn main() {
             Instruction::Left => next.0.clone(),
             Instruction::Right => next.1.clone()
         };
-    
+
         steps +=1;
         i = steps%instructions.len();
     }
@@ -87,23 +88,25 @@ fn main() {
 */
     println!("starting {starting_nodes:?}");
     
-    let mut current_nodes = starting_nodes.clone();
-    i = 0;
-    steps = 0;
+
     //part 2
-    while !current_nodes.iter().all(|n| n.ends_with("Z")) {
-        let instruction = &instructions[i];
+    let mut node_steps = vec![0; starting_nodes.len()];
+    let node_steps = starting_nodes.iter().map(|n| {
+        let mut cur_node = n.clone();
+        let mut steps = 0;
+        while !cur_node.ends_with("Z") {
+            let instruction = &instructions[steps%instructions.len()];
 
-        current_nodes.iter_mut().for_each(|current| {
-            let next = nodes.get(current).unwrap();
-
-            *current = match instruction {
+            let next = nodes.get(&cur_node).unwrap();
+            cur_node = match instruction {
                 Instruction::Left => next.0.clone(),
                 Instruction::Right => next.1.clone()
             };
-        });
-        steps +=1;
-        i = steps%instructions.len();
-    }
-    println!("steps for part 2 {steps}");
+
+            steps +=1;
+        }
+        steps
+    }).collect::<Vec<usize>>().iter().fold(1,|acc, num| Integer::lcm(&acc, num));
+
+    println!("steps for part 2 {node_steps:?}");
 }
