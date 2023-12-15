@@ -1,4 +1,5 @@
-use std::fmt;
+use std::collections::{HashMap, HashSet};
+use std::{fmt, vec};
 use std::fmt::Formatter;
 
 const TEST: &str = r#"O....#....
@@ -12,7 +13,7 @@ O.#..O.#.#
 #....###..
 #OO..#...."#;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone, Hash, Eq)]
 enum RockType {
     Solid,
     Rounded,
@@ -32,6 +33,32 @@ impl From<char> for RockType {
 
 struct Dish {
     rocks: Vec<Vec<RockType>>
+}
+
+fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
+    assert!(!v.is_empty());
+    let len = v[0].len();
+    let mut iters: Vec<_> = v.into_iter().map(|n| n.into_iter()).collect();
+    (0..len)
+        .map(|_| {
+            iters
+                .iter_mut()
+                .map(|n| n.next().unwrap())
+                .collect::<Vec<T>>()
+        })
+        .collect()
+}
+
+fn reverse_lines<T>(v: &mut Vec<Vec<T>>)  {
+    v.iter_mut().for_each(|line| {
+        line.reverse()
+    })
+}
+
+fn rotate90deg<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>>{
+    let mut r = transpose(v);
+    reverse_lines(&mut r);
+    r
 }
 
 impl Dish {
@@ -78,6 +105,10 @@ impl Dish {
             line.iter().filter(|&r| *r == RockType::Rounded).count() * (max_weight - pos)
         }).sum()
     }
+
+    fn rotate(&mut self) {
+        self.rocks = rotate90deg(self.rocks.clone());
+    }
 }
 
 impl fmt::Display for Dish {
@@ -104,9 +135,35 @@ fn main() {
 
     let rocks: Vec<Vec<RockType>> = input.lines().map(|line| line.chars().map(|c| c.into()).collect()).collect();
     let mut dish = Dish{rocks};
-    println!("{dish}");
-    dish.tilt();;
-    println!("{dish}");
-    let load = dish.load();
-    println!("{load}");
+
+    let total_steps = 1000000000usize;
+    let mut past_dishes = HashMap::new();
+    let mut dishes: Vec<Vec<Vec<RockType>>> = Vec::new();
+    let mut cycle_len = 0usize;
+    let mut cycle_start = 0usize;
+    for i in 0..total_steps {
+
+        for j in 0..4 {
+            dish.tilt();
+            dish.rotate();
+        }
+        if let Some(r) = past_dishes.get(&dish.rocks.clone()) {
+            if cycle_start == 0 {
+                cycle_start = i;
+            } else if cycle_len == 0 && dish.rocks == dishes[cycle_start] {
+                cycle_len = i - cycle_start;
+            } else if cycle_start != 0 && cycle_len != 0 {
+                let modulo = (i - cycle_start) % cycle_len+cycle_start;
+                let modulo = (1000usize-1 - cycle_start) % cycle_len+cycle_start;
+                dish.rocks = dishes[modulo].clone();
+                let load = dish.load();
+                println!("{load}");
+                return
+            }
+        }
+
+        dishes.push(dish.rocks.clone());
+        past_dishes.entry(dish.rocks.clone()).or_insert(i*4+i);
+    }
+
 }
