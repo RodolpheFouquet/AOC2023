@@ -1,5 +1,3 @@
-use std::collections::{HashMap, HashSet};
-
 use nom::{
     bytes::complete::{tag},
     combinator::{map_res, recognize},
@@ -9,7 +7,7 @@ use nom::{
     IResult,
     Parser,
 };
-use nom::bytes::complete::{take_till, take_while};
+use nom::bytes::complete::{take_while};
 use nom::multi::separated_list0;
 
 const TEST: &str = "rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7";

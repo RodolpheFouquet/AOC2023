@@ -1,9 +1,15 @@
-use std::collections::HashSet;
-use std::fmt;
-use std::ops::Sub;
-use itertools::Itertools;
-use std::iter;
-use rayon::prelude::*;
+use nom::{
+    bytes::complete::{tag},
+    multi::many0,
+    combinator::{map_res, recognize},
+    branch::alt,
+    character::complete::digit1,
+    combinator::value,
+    IResult,
+    Parser,
+};
+use nom::character::complete::{line_ending, space0};
+use nom::multi::{separated_list1, separated_list0};
 
 const TEST: &str = r#"???.### 1,1,3
 .??..??...?##. 1,1,3
@@ -18,42 +24,6 @@ enum SpringState {
     Ok,
     Unknown
 }
-
-impl From<char> for SpringState {
-    fn from(value: char) -> Self {
-        match value {
-            '#' => Self::Damaged,
-            '.' => Self::Ok,
-            '?'=> Self::Unknown,
-            _ => unreachable!()
-        }
-    }
-}
-
-impl fmt::Display for SpringState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Use `self.number` to refer to each positional data point.
-        let c = match self {
-            Self::Damaged => '#',
-            Self::Ok => '.',
-            Self::Unknown => '?',
-
-        };
-        write!(f, "{}", c)
-    }
-}
-
-struct States(Vec<SpringState>);
-
-impl fmt::Display for States {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.iter().for_each(|c| {
-            write!(f, "{}", c);
-        });
-        write!(f, "")
-    }
-}
-
 
 fn count_consecutive(v: &Vec<SpringState>) -> Vec<usize> {
     let mut consecutive = 0;
@@ -76,52 +46,52 @@ fn count_consecutive(v: &Vec<SpringState>) -> Vec<usize> {
     ret
 }
 
+fn parse_spring(input: &str) -> IResult<&str, SpringState> {
+    alt((
+        value(SpringState::Damaged, tag("#")),
+        value(SpringState::Ok, tag(".")),
+        value(SpringState::Unknown, tag("?")),
+    ))(input)
+}
+
+fn is_spring(c: char) -> bool {
+    match c {
+        '.' | '#' | '?' => true,
+        _ => false
+    }
+}
+
+fn parse_springs(input: &str) -> IResult<&str, Vec<SpringState>> {
+    many0(
+        parse_spring,
+    ).parse(input)
+}
+
+fn parse_number(input: &str) -> IResult<&str, u32> {
+        map_res(recognize(digit1), str::parse)(input)
+}
+
+fn parse_consecutive(input: &str) -> IResult<&str, Vec<u32>> {
+    separated_list0(tag(","), parse_number)(input)
+}
+
+fn parse_line(input: &str) -> IResult<&str, (Vec<SpringState>, Vec<u32>)> {
+    println!("1", );
+    let (remaining, springs) = parse_springs(input)?;
+    let (remaining, _) = space0(remaining)?;
+    let (remaining, consecutive) = parse_consecutive(remaining)?;
+
+    Ok((remaining, (springs, consecutive)))
+}
+
+
+fn parse(input: &str) ->IResult<&str, Vec<(Vec<SpringState>, Vec<u32>)>> {
+    separated_list1(line_ending, parse_line)(input)
+}
 
 fn main() {
-    let input = include_str!("../input.txt");
-    let records = input.lines().map(|line| {
-        let comps = line.split_whitespace().collect::<Vec<&str>>();
-        // part
-        let r : String= [&comps[0].clone(), "?"].concat().repeat(5);
-        let r =&r[0..r.len() - 1];
-        let counts = comps.last().unwrap().split(',').map(|n| n.parse::<usize>().unwrap()).collect::<Vec<_>>();
-        (
-            r.chars().map(|c| c.into()).collect::<Vec<SpringState>>(),
-            counts.repeat(5)
+    let input = TEST;
 
-        )
-    }).collect::<Vec<_>>();
-
-    let sum: u64 = records.par_iter().map(|(record, trace)| {
-        let unknown_indices = record.iter().enumerate().filter(|&(pos, r)| *r == SpringState::Unknown).map(|(pos, r)| pos).collect::<HashSet<_>>();
-        let s: States = States(record.clone());
-
-        let mut score = 0;
-        for i in 0..=unknown_indices.len() {
-            for v  in unknown_indices.iter().combinations(i) {
-                let v_as_hash = v.clone().into_iter().map(|n| *n).collect::<HashSet<_>>();
-                let other = unknown_indices.sub(&v_as_hash);
-
-                let mut rec_dmg = record.clone();
-                for &a in &v {
-                    rec_dmg[*a] = SpringState::Ok;
-                    for b in &other {
-                        rec_dmg[*b] = SpringState::Damaged;
-                    }
-                }
-                if v.len() == 0 {
-                    for b in &other {
-                        rec_dmg[*b] = SpringState::Damaged;
-                    }
-                }
-                let consecutive = crate::count_consecutive(&rec_dmg);
-                if consecutive == *trace {
-                    score +=1;
-                }
-            }
-        }
-        score
-    }).sum();
-
-    println!("{sum:?}");
+    let sp = parse(input);
+    println!("{sp:?}");
 }
